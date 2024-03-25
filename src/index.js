@@ -18,8 +18,26 @@ async function run() {
       return calcTimeUnits(diff).days >= numDaysOldToBeDeleted;
     };
 
-    const workflowRuns = await api.listWorkflowRuns();
+    // get all workflows
+    const workflowRuns = await api.listWorkflowRuns().filter(hasRunBeforeDate);
 
+    // object to store workflows by path
+    let workflowsByPath = {};
+
+    // Sort and group workflows by path
+    workflowRuns.forEach(workflow => {
+      if (!workflowsByPath[workflow.path]) {
+        workflowsByPath[workflow.path] = [];
+      }
+      workflowsByPath[workflow.path].push(workflow);
+    });
+
+    // only keeps the X last
+    for (let path in workflowsByPath) {
+      workflowsByPath[path] = workflowsByPath[path].filter(hasRunBeforeDate).slice(-numRunsToKeep);
+    }
+
+    
     const workflowRunsToDelete = workflowRuns.filter(hasRunBeforeDate).slice(numRunsToKeep);
 
     console.info("%d workflow runs to be deleted", workflowRunsToDelete.length);
